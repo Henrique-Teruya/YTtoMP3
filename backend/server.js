@@ -8,12 +8,16 @@ const { downloadAudio, getVideoInfo } = require('./downloader');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// Endpoint to get video info (bonus)
+/**
+ * POST /info
+ * Fetches video title and thumbnail
+ */
 app.post('/info', async (req, res) => {
     const { url } = req.body;
     if (!url) {
@@ -24,43 +28,53 @@ app.post('/info', async (req, res) => {
         const info = await getVideoInfo(url);
         res.json(info);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to fetch video info' });
+        console.error('Info fetch error:', error.message);
+        res.status(500).json({ error: error.message || 'Failed to fetch video info' });
     }
 });
 
-// Endpoint to download audio
+/**
+ * POST /download
+ * Downloads audio and returns the file
+ */
 app.post('/download', async (req, res) => {
     const { url, format } = req.body;
 
+    // Basic validation
     if (!url || !format) {
         return res.status(400).json({ error: 'URL and format are required' });
     }
 
     const validFormats = ['mp3', 'wav', 'flac'];
     if (!validFormats.includes(format)) {
-        return res.status(400).json({ error: 'Invalid format' });
+        return res.status(400).json({ error: 'Invalid format. Supported: mp3, wav, flac' });
     }
 
     try {
         const { filePath, title } = await downloadAudio(url, format);
 
-        res.download(filePath, `${title}.${format}`, (err) => {
+        // Sanitize title for Content-Disposition header
+        const safeTitle = title.replace(/[^\x20-\x7E]/g, '');
+        const downloadName = `${safeTitle || 'audio'}.${format}`;
+
+        res.download(filePath, downloadName, (err) => {
             if (err) {
-                console.error('Error sending file:', err);
+                console.error('Error during file transfer:', err.message);
             }
 
-            // Delete temporary file after sending
+            // Cleanup: delete temporary file after sending or failure
             fs.unlink(filePath, (unlinkErr) => {
-                if (unlinkErr) console.error('Error deleting temp file:', unlinkErr);
+                if (unlinkErr) console.error('Cleanup error:', unlinkErr.message);
+                else console.log(`Cleaned up: ${filePath}`);
             });
         });
     } catch (error) {
-        console.error('Download error:', error);
-        res.status(500).json({ error: 'Failed to process audio' });
+        console.error('Download error:', error.message);
+        res.status(500).json({ error: error.message || 'Failed to process audio' });
     }
 });
 
+// Start server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
