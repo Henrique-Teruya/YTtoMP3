@@ -1,8 +1,6 @@
-# 🎧 YouTube to MP3/FLAC Converter — Vibe Coding Project
+# 🎧 YouTube to Audio Converter
 
 A minimalist and powerful web app that allows users to extract and download audio from YouTube videos in multiple formats such as MP3, WAV, and FLAC.
-
-This project is part of the "Vibe Coding Maxin" challenge — a fully mobile-built experiment where the entire application is designed and developed using only a smartphone, ChatGPT as the prompter, and AI-assisted tools for coding and deployment.
 
 ## 🚀 Features
 
@@ -11,35 +9,61 @@ This project is part of the "Vibe Coding Maxin" challenge — a fully mobile-bui
   - MP3 (universal compatibility)
   - WAV (uncompressed audio)
   - FLAC (lossless compression)
-- ⚙️ Choose audio quality (bitrate options)
-- 🖼️ Preview video title and thumbnail before downloading (planned)
+- 🖼️ Preview video title and thumbnail before downloading
 - 📦 Fast and lightweight processing
+- 🌙 Modern dark UI
 
 ## 🧠 Tech Stack
 
-- Frontend: HTML, CSS, JavaScript
-- Backend: Node.js
-- Tools:
-  - yt-dlp (media extraction)
-  - ffmpeg (audio processing)
+- **Frontend:** Vanilla HTML, CSS, JavaScript
+- **Backend:** Node.js, Express
+- **Tools:**
+  - `yt-dlp` (for media extraction)
+  - `ffmpeg` (for audio processing and conversion)
 
 ## 📁 Project Structure
 
+```
 youtube-to-mp3/
-├── frontend/  
-├── backend/  
-├── README.md  
-├── package.json  
+├── frontend/
+│   ├── index.html
+│   ├── style.css
+│   └── script.js
+├── backend/
+│   ├── server.js
+│   └── downloader.js
+├── downloads/      # Temporary storage for processing
+├── package.json
+└── README.md
+```
+
+## 🛠️ Installation & Setup
+
+1. **Install System Dependencies:**
+   Make sure you have `yt-dlp` and `ffmpeg` installed on your system.
+   ```bash
+   # Using pip for yt-dlp
+   pip install yt-dlp
+
+   # Using apt for ffmpeg (Ubuntu/Debian)
+   sudo apt update && sudo apt install ffmpeg
+   ```
+
+2. **Install Node.js Dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Start the Server:**
+   ```bash
+   npm start
+   ```
+   The app will be available at `http://localhost:3000`.
 
 ## ⚠️ Disclaimer
 
-This project is intended for educational purposes only.  
-Downloading copyrighted content without permission may violate YouTube's Terms of Service.
-
-## 🌍 Vision
-
-The goal is to explore how far modern AI tools can go in enabling full-stack development — even in unconventional environments like a phone during a road trip.
+This project is intended for **educational purposes only**.
+Downloading copyrighted content without permission may violate YouTube's Terms of Service and local laws. Use this tool responsibly.
 
 ---
-
-Made with 📱 + ☕ + 🚗 +
+Built with ❤️ for the Vibe Coding community.
