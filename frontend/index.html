@@ -3,38 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Audio Converter</title>
+    <title>YouTube to MP3 — High Quality Audio</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>YouTube Audio Converter</h1>
-            <p>Convert and download YouTube videos to high-quality audio</p>
+    <div class="page-wrapper">
+        <header class="hero">
+            <div class="container">
+                <h1 class="headline">YouTube to MP3</h1>
+                <p class="subheadline">Convert YouTube videos to high-quality audio effortlessly.</p>
+            </div>
         </header>
 
-        <main>
-            <div class="converter-box">
-                <input type="text" id="url-input" placeholder="Paste YouTube URL here..." aria-label="YouTube URL">
+        <main class="container">
+            <div class="converter-container">
+                <div class="input-section">
+                    <input type="text" id="url-input" placeholder="Paste YouTube URL here" aria-label="YouTube URL">
+                </div>
 
-                <div class="options">
-                    <select id="format-select" aria-label="Select format">
+                <div class="controls-section">
+                    <select id="format-select" aria-label="Select audio format">
                         <option value="mp3">MP3</option>
                         <option value="wav">WAV</option>
                         <option value="flac">FLAC</option>
                     </select>
-                    <button id="download-btn">Download</button>
+                    <button id="download-btn" class="btn-primary">Download</button>
+                </div>
+
+                <!-- Status Feedback -->
+                <div id="status-container" class="status-container hidden">
+                    <div id="loader" class="spinner"></div>
+                    <p id="status-message">Converting...</p>
+                </div>
+
+                <!-- Error UI Component -->
+                <div id="error-box" class="error-box hidden">
+                    <p id="error-text"></p>
+                </div>
+
+                <!-- Success UI Component -->
+                <div id="success-box" class="success-box hidden">
+                    <p id="success-text">Download ready</p>
                 </div>
             </div>
 
-            <div id="status-container" class="status-container hidden">
-                <div id="loader" class="loader"></div>
-                <p id="status-message"></p>
+            <div class="info-section">
+                <a href="#" class="btn-secondary">How it works</a>
             </div>
         </main>
 
-        <footer>
-            <p>Fast, free, and secure.</p>
+        <footer class="container">
+            <p>Fast, free, and secure. Designed for simplicity.</p>
         </footer>
     </div>
     <script src="script.js"></script>
