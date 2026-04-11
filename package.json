@@ -1,0 +1,17 @@
+{
+  "name": "youtube-to-mp3",
+  "version": "1.0.0",
+  "description": "A web application that allows users to download audio from YouTube videos in different formats.",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "morgan": "^1.10.0"
+  },
+  "author": "",
+  "license": "ISC"
+}

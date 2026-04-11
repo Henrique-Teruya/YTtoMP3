@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube to Audio Converter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎧 YouTube to Audio</h1>
+            <p>Download high-quality audio from YouTube videos</p>
+        </header>
+
+        <main>
+            <div class="input-group">
+                <input type="text" id="url-input" placeholder="Paste YouTube URL here..." aria-label="YouTube URL">
+                <button id="fetch-info-btn">Get Info</button>
+            </div>
+
+            <div id="video-preview" class="preview-card hidden">
+                <img id="thumbnail" src="" alt="Thumbnail">
+                <div class="video-details">
+                    <h3 id="video-title">Video Title</h3>
+                    <div class="controls">
+                        <select id="format-select">
+                            <option value="mp3">MP3</option>
+                            <option value="wav">WAV</option>
+                            <option value="flac">FLAC</option>
+                        </select>
+                        <button id="download-btn">Download Audio</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loader" class="loader hidden">
+                <div class="spinner"></div>
+                <p id="status-text">Processing...</p>
+            </div>
+
+            <div id="error-message" class="error hidden"></div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 YouTube to Audio Converter. For educational purposes only.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
