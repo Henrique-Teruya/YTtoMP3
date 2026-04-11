@@ -1,121 +1,93 @@
 document.addEventListener('DOMContentLoaded', () => {
     const urlInput = document.getElementById('url-input');
-    const fetchInfoBtn = document.getElementById('fetch-info-btn');
-    const downloadBtn = document.getElementById('download-btn');
     const formatSelect = document.getElementById('format-select');
-    const videoPreview = document.getElementById('video-preview');
-    const thumbnail = document.getElementById('thumbnail');
-    const videoTitle = document.getElementById('video-title');
+    const downloadBtn = document.getElementById('download-btn');
+    const statusContainer = document.getElementById('status-container');
+    const statusMessage = document.getElementById('status-message');
     const loader = document.getElementById('loader');
-    const statusText = document.getElementById('status-text');
-    const errorMessage = document.getElementById('error-message');
 
-    let currentVideoUrl = '';
+    // PLACEHOLDER: Replace with your actual backend URL from Railway
+    // For local development, it can be http://localhost:3000
+    const BACKEND_URL = '';
 
-    // Fetch video info
-    fetchInfoBtn.addEventListener('click', async () => {
+    downloadBtn.addEventListener('click', async () => {
         const url = urlInput.value.trim();
+        const format = formatSelect.value;
+
         if (!url) {
-            showError('Please paste a YouTube URL');
+            showStatus('Please enter a YouTube URL', 'error');
             return;
         }
 
-        hideError();
-        showLoader('Fetching video info...');
-        videoPreview.classList.add('hidden');
-
-        try {
-            const response = await fetch('/info', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                currentVideoUrl = url;
-                thumbnail.src = data.thumbnail;
-                videoTitle.textContent = data.title;
-                videoPreview.classList.remove('hidden');
-            } else {
-                showError(data.error || 'Failed to fetch video info');
-            }
-        } catch (error) {
-            showError('Network error. Please try again.');
-        } finally {
-            hideLoader();
-        }
-    });
-
-    // Handle download
-    downloadBtn.addEventListener('click', async () => {
-        const format = formatSelect.value;
-
-        hideError();
-        showLoader(`Processing your ${format.toUpperCase()}... this may take a moment.`);
+        // Reset UI
+        showStatus('Converting... this may take a minute.', 'loading');
         downloadBtn.disabled = true;
 
         try {
-            const response = await fetch('/download', {
+            const response = await fetch(`${BACKEND_URL}/download`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: currentVideoUrl, format })
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url, format }),
             });
 
-            if (response.ok) {
-                // Get the blob from the response
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-
-                // Create a temporary link to trigger download
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-
-                // Try to extract filename from header
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let fileName = `audio.${format}`;
-                if (contentDisposition) {
-                    const match = contentDisposition.match(/filename="(.+)"/);
-                    if (match) fileName = match[1];
-                }
-
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-
-                // Cleanup
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } else {
+            if (!response.ok) {
                 const errorData = await response.json();
-                showError(errorData.error || 'Download failed');
+                throw new Error(errorData.error || 'Conversion failed');
             }
+
+            // Handle file download
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+
+            // Create a temporary link
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+
+            // Try to get filename from content-disposition header
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let fileName = `audio.${format}`;
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?(.+?)"?$/);
+                if (match && match[1]) {
+                    fileName = match[1];
+                }
+            }
+
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+
+            // Cleanup
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            showStatus('Download started successfully!', 'success');
         } catch (error) {
-            showError('Network error during download.');
+            console.error('Download error:', error);
+            showStatus(error.message || 'An error occurred during download', 'error');
         } finally {
-            hideLoader();
             downloadBtn.disabled = false;
         }
     });
 
-    function showLoader(text) {
-        statusText.textContent = text;
-        loader.classList.remove('hidden');
-    }
-
-    function hideLoader() {
+    /**
+     * Updates the status UI
+     * @param {string} message - Message to display
+     * @param {string} type - 'loading', 'success', or 'error'
+     */
+    function showStatus(message, type) {
+        statusMessage.textContent = message;
+        statusContainer.classList.remove('hidden', 'error', 'success');
         loader.classList.add('hidden');
-    }
 
-    function showError(text) {
-        errorMessage.textContent = text;
-        errorMessage.classList.remove('hidden');
-    }
-
-    function hideError() {
-        errorMessage.classList.add('hidden');
-        errorMessage.textContent = '';
+        if (type === 'loading') {
+            loader.classList.remove('hidden');
+        } else if (type === 'error') {
+            statusContainer.classList.add('error');
+        } else if (type === 'success') {
+            statusContainer.classList.add('success');
+        }
     }
 });
