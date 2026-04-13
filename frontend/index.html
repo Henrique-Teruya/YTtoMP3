@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube to MP3 — High Quality Audio</title>
+    <title>YouTube to MP3 — Áudio de Alta Qualidade</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,29 +11,35 @@
         <header class="hero">
             <div class="container">
                 <h1 class="headline">YouTube to MP3</h1>
-                <p class="subheadline">Convert YouTube videos to high-quality audio effortlessly.</p>
+                <p class="subheadline">Converta vídeos do YouTube para áudio de alta qualidade sem esforço.</p>
             </div>
         </header>
 
         <main class="container">
             <div class="converter-container">
                 <div class="input-section">
-                    <input type="text" id="url-input" placeholder="Paste YouTube URL here" aria-label="YouTube URL">
+                    <input type="text" id="url-input" placeholder="Cole o link do YouTube aqui" aria-label="YouTube URL">
+                </div>
+
+                <!-- Video Preview Section -->
+                <div id="preview-container" class="preview-container hidden">
+                    <img id="video-thumbnail" src="" alt="Thumbnail do vídeo">
+                    <h3 id="video-title">Título do Vídeo</h3>
                 </div>
 
                 <div class="controls-section">
-                    <select id="format-select" aria-label="Select audio format">
+                    <select id="format-select" aria-label="Selecione o formato de áudio">
                         <option value="mp3">MP3</option>
                         <option value="wav">WAV</option>
                         <option value="flac">FLAC</option>
                     </select>
-                    <button id="download-btn" class="btn-primary">Download</button>
+                    <button id="download-btn" class="btn-primary">Baixar</button>
                 </div>
 
                 <!-- Status Feedback -->
                 <div id="status-container" class="status-container hidden">
                     <div id="loader" class="spinner"></div>
-                    <p id="status-message">Converting...</p>
+                    <p id="status-message">Convertendo...</p>
                 </div>
 
                 <!-- Error UI Component -->
@@ -43,17 +49,17 @@
 
                 <!-- Success UI Component -->
                 <div id="success-box" class="success-box hidden">
-                    <p id="success-text">Download ready</p>
+                    <p id="success-text">Download concluído com sucesso!</p>
                 </div>
             </div>
 
             <div class="info-section">
-                <a href="#" class="btn-secondary">How it works</a>
+                <a href="#" class="btn-secondary">Como funciona</a>
             </div>
         </main>
 
         <footer class="container">
-            <p>Fast, free, and secure. Designed for simplicity.</p>
+            <p>Rápido, gratuito e seguro. Projetado para ser simples.</p>
         </footer>
     </div>
     <script src="script.js"></script>

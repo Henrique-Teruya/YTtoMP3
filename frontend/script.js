@@ -8,8 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorText = document.getElementById('error-text');
     const successBox = document.getElementById('success-box');
 
-    // PLACEHOLDER: Replace with your actual backend URL from Railway
-    // For local development, it can be http://localhost:3000
+    // Preview elements
+    const previewContainer = document.getElementById('preview-container');
+    const videoThumbnail = document.getElementById('video-thumbnail');
+    const videoTitle = document.getElementById('video-title');
+
+    // BACKEND_URL should be empty for relative calls if served from same origin
     const BACKEND_URL = '';
 
     /**
@@ -25,8 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Updates the UI state
-     * @param {string} state - 'idle', 'loading', 'success', 'error'
-     * @param {string} [message] - Optional message for error state
+     * @param {string} state - 'idle', 'loading', 'success', 'error', 'fetching-info'
+     * @param {string} [message] - Optional message
      */
     function updateUIState(state, message = '') {
         // Reset all
@@ -36,8 +40,14 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadBtn.disabled = false;
 
         switch (state) {
+            case 'fetching-info':
+                statusContainer.classList.remove('hidden');
+                statusMessage.textContent = 'Buscando informações do vídeo...';
+                downloadBtn.disabled = true;
+                break;
             case 'loading':
                 statusContainer.classList.remove('hidden');
+                statusMessage.textContent = 'Convertendo e preparando download...';
                 downloadBtn.disabled = true;
                 break;
             case 'success':
@@ -45,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'error':
                 errorBox.classList.remove('hidden');
-                errorText.textContent = message || 'Something went wrong. Try again.';
+                errorText.textContent = message || 'Ocorreu um erro. Tente novamente.';
                 break;
             case 'idle':
             default:
@@ -53,20 +63,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * Fetches video info and updates preview
+     */
+    async function fetchVideoInfo() {
+        const url = urlInput.value.trim();
+        if (!isValidYouTubeUrl(url)) {
+            previewContainer.classList.add('hidden');
+            return;
+        }
+
+        updateUIState('fetching-info');
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/info`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Não foi possível carregar as informações do vídeo.');
+            }
+
+            const data = await response.json();
+            videoThumbnail.src = data.thumbnail;
+            videoTitle.textContent = data.title;
+            previewContainer.classList.remove('hidden');
+            updateUIState('idle');
+        } catch (error) {
+            console.error("Erro ao buscar info:", error);
+            // We don't necessarily want to block the download if info fails,
+            // but we should inform the user if it's a critical failure.
+            updateUIState('error', error.message);
+            previewContainer.classList.add('hidden');
+        }
+    }
+
+    // Debounce URL input for info fetching
+    let timeout = null;
+    urlInput.addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            fetchVideoInfo();
+        }, 800);
+    });
+
     downloadBtn.addEventListener('click', async () => {
         const url = urlInput.value.trim();
         const format = formatSelect.value;
 
-        console.log("Sending request:", { url, format });
-
         // Validate Input
         if (!url) {
-            updateUIState('error', 'Please enter a YouTube URL.');
+            updateUIState('error', 'Por favor, insira um link do YouTube.');
             return;
         }
 
         if (!isValidYouTubeUrl(url)) {
-            updateUIState('error', 'Please enter a valid YouTube link.');
+            updateUIState('error', 'Por favor, insira um link válido do YouTube.');
             return;
         }
 
@@ -82,11 +137,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ url, format }),
             });
 
-            console.log("Response received");
-
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Conversion failed');
+                let errorMsg = 'Falha na conversão.';
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || errorMsg;
+                } catch (e) {
+                    // response might not be JSON
+                }
+                throw new Error(errorMsg);
             }
 
             // Handle file download
@@ -112,10 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
             window.URL.revokeObjectURL(downloadUrl);
 
             updateUIState('success');
-            console.log("Download complete");
         } catch (error) {
-            console.error("Error:", error);
-            updateUIState('error', error.message || 'An error occurred during download.');
+            console.error("Erro no download:", error);
+            updateUIState('error', error.message || 'Ocorreu um erro durante o download.');
         }
     });
 });
