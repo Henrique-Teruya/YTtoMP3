@@ -1,17 +1,40 @@
 {
-  "name": "youtube-to-mp3",
+  "name": "ytmp3-pro",
   "version": "1.0.0",
-  "description": "A web application that allows users to download audio from YouTube videos in different formats.",
+  "description": "Professional YouTube to audio converter — MP3, WAV, FLAC, M4A. Powered by yt-dlp + FFmpeg.",
   "main": "backend/server.js",
   "scripts": {
     "start": "node backend/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon backend/server.js",
+    "check:deps": "node -e \"const { execSync } = require('child_process'); try { execSync('yt-dlp --version', {stdio:'pipe'}); console.log('✓ yt-dlp found'); } catch { console.error('✗ yt-dlp not found'); } try { execSync('ffmpeg -version', {stdio:'pipe'}); console.log('✓ ffmpeg found'); } catch { console.error('✗ ffmpeg not found'); }\""
   },
+  "keywords": [
+    "youtube",
+    "mp3",
+    "wav",
+    "audio",
+    "converter",
+    "yt-dlp",
+    "ffmpeg",
+    "downloader"
+  ],
+  "author": "YTMP3 PRO",
+  "license": "MIT",
   "dependencies": {
+    "archiver": "^7.0.1",
+    "compression": "^1.7.5",
     "cors": "^2.8.5",
-    "express": "^4.21.0",
-    "morgan": "^1.10.0"
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0",
+    "uuid": "^11.1.0"
   },
-  "author": "",
-  "license": "ISC"
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "ffmpeg": {
+      "source": "digitalsamba/claude-code-video-toolkit",
+      "sourceType": "github",
+      "computedHash": "51fa05bc18bb2691e622aefd1d8ec6d4d96a9e9c44cdf599003c9d6003d11a07"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
+    },
+    "nodejs-backend-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "c6a99966c2565acc388e574039127abc770bb9a3338be761e421e16f023f702b"
+    },
+    "yt-dlp": {
+      "source": "lwmxiaobei/yt-dlp-skill",
+      "sourceType": "github",
+      "computedHash": "0748a41e6c5dded47f2a9135805b7aea82d7a6f745a64e8e4fd1d49e69772631"
+    }
+  }
+}

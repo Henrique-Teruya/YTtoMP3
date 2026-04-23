@@ -1,179 +1,432 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const urlInput = document.getElementById('url-input');
-    const formatSelect = document.getElementById('format-select');
-    const downloadBtn = document.getElementById('download-btn');
-    const statusContainer = document.getElementById('status-container');
-    const statusMessage = document.getElementById('status-message');
-    const errorBox = document.getElementById('error-box');
-    const errorText = document.getElementById('error-text');
-    const successBox = document.getElementById('success-box');
+/**
+ * YTMP3 PRO — Frontend Application
+ *
+ * Vanilla JS application handling URL input, format selection,
+ * conversion requests, SSE progress streaming, and download.
+ */
 
-    // Preview elements
-    const previewContainer = document.getElementById('preview-container');
-    const videoThumbnail = document.getElementById('video-thumbnail');
-    const videoTitle = document.getElementById('video-title');
+(function () {
+  'use strict';
 
-    // BACKEND_URL should be empty for relative calls if served from same origin
-    const BACKEND_URL = '';
+  // ─── DOM References ─────────────────────────────────
+  const $urlInput      = document.getElementById('url-input');
+  const $btnClear      = document.getElementById('btn-clear');
+  const $inputHint     = document.getElementById('input-hint');
+  const $btnConvert    = document.getElementById('btn-convert');
+  const $btnConvertText   = document.querySelector('.btn-convert-text');
+  const $btnConvertLoader = document.querySelector('.btn-convert-loader');
+  const $previewCard   = document.getElementById('preview-card');
+  const $previewThumb  = document.getElementById('preview-thumbnail');
+  const $previewTitle  = document.getElementById('preview-title');
+  const $previewChannel = document.getElementById('preview-channel');
+  const $previewDuration = document.getElementById('preview-duration');
+  const $progressCard  = document.getElementById('progress-card');
+  const $statusBadge   = document.getElementById('status-badge');
+  const $statusText    = document.getElementById('status-text');
+  const $progressPercent = document.getElementById('progress-percent');
+  const $progressFill  = document.getElementById('progress-bar-fill');
+  const $progressSpeed = document.getElementById('progress-speed');
+  const $progressEta   = document.getElementById('progress-eta');
+  const $waveform      = document.getElementById('waveform');
+  const $downloadCard  = document.getElementById('download-card');
+  const $downloadTitle = document.getElementById('download-title');
+  const $downloadFilename = document.getElementById('download-filename');
+  const $btnDownload   = document.getElementById('btn-download');
+  const $btnNew        = document.getElementById('btn-new');
+  const $errorCard     = document.getElementById('error-card');
+  const $errorMessage  = document.getElementById('error-message');
+  const $btnRetry      = document.getElementById('btn-retry');
+  const $historySection = document.getElementById('history-section');
+  const $historyList   = document.getElementById('history-list');
+  const $toastContainer = document.getElementById('toast-container');
+  const $formatBtns    = document.querySelectorAll('.format-btn');
 
-    /**
-     * Basic YouTube URL validation
-     * @param {string} url
-     * @returns {boolean}
-     */
-    function isValidYouTubeUrl(url) {
-        if (!url) return false;
-        const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
-        return pattern.test(url);
+  // ─── State ──────────────────────────────────────────
+  const state = {
+    url: '',
+    format: 'mp3',
+    jobId: null,
+    status: 'idle', // idle | fetching | converting | completed | error
+    eventSource: null,
+    history: loadHistory(),
+  };
+
+  // ─── YouTube URL Validation ─────────────────────────
+  const YT_REGEX = /^https?:\/\/(www\.)?(youtube\.com\/(watch\?v=|shorts\/|playlist\?list=)|youtu\.be\/|music\.youtube\.com\/watch\?v=)/;
+
+  function isValidUrl(url) {
+    return YT_REGEX.test(url.trim());
+  }
+
+  // ─── Init ───────────────────────────────────────────
+  function init() {
+    renderHistory();
+    bindEvents();
+  }
+
+  function bindEvents() {
+    $urlInput.addEventListener('input', onUrlInput);
+    $urlInput.addEventListener('paste', onUrlPaste);
+    $urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') $btnConvert.click();
+    });
+    $btnClear.addEventListener('click', clearInput);
+    $btnConvert.addEventListener('click', startConversion);
+    $btnDownload.addEventListener('click', downloadFile);
+    $btnNew.addEventListener('click', resetUI);
+    $btnRetry.addEventListener('click', () => {
+      hideSection($errorCard);
+      startConversion();
+    });
+    $formatBtns.forEach((btn) => {
+      btn.addEventListener('click', () => selectFormat(btn.dataset.format));
+    });
+  }
+
+  // ─── URL Input Handling ─────────────────────────────
+  function onUrlInput() {
+    const val = $urlInput.value.trim();
+    state.url = val;
+    $btnClear.style.display = val ? 'block' : 'none';
+    $btnConvert.disabled = !isValidUrl(val);
+
+    if (val && !isValidUrl(val)) {
+      setHint('URL inválida. Cole um link do YouTube.', 'error');
+    } else {
+      setHint('');
+    }
+  }
+
+  function onUrlPaste() {
+    setTimeout(() => {
+      onUrlInput();
+      if (isValidUrl($urlInput.value.trim())) {
+        setHint('URL detectada ✓', 'success');
+        fetchVideoInfo($urlInput.value.trim());
+      }
+    }, 50);
+  }
+
+  function clearInput() {
+    $urlInput.value = '';
+    state.url = '';
+    $btnClear.style.display = 'none';
+    $btnConvert.disabled = true;
+    setHint('');
+    hideSection($previewCard);
+  }
+
+  function setHint(text, type) {
+    $inputHint.textContent = text;
+    $inputHint.className = 'input-hint' + (type ? ` ${type}` : '');
+  }
+
+  // ─── Format Selection ──────────────────────────────
+  function selectFormat(format) {
+    state.format = format;
+    $formatBtns.forEach((btn) => {
+      const active = btn.dataset.format === format;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-checked', active);
+    });
+  }
+
+  // ─── Fetch Video Info ──────────────────────────────
+  async function fetchVideoInfo(url) {
+    try {
+      const res = await fetch('/api/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json();
+      if (data.status === 'ok' && data.data) {
+        showPreview(data.data);
+      }
+    } catch {
+      // Silently fail — preview is optional
+    }
+  }
+
+  function showPreview(info) {
+    if (info.thumbnail) {
+      $previewThumb.src = info.thumbnail;
+      $previewThumb.alt = info.title || 'Thumbnail';
+    }
+    $previewTitle.textContent = info.title || 'Sem título';
+    $previewChannel.textContent = info.channel || '';
+    $previewDuration.textContent = info.duration ? formatDuration(info.duration) : '';
+    showSection($previewCard);
+  }
+
+  // ─── Conversion Flow ───────────────────────────────
+  async function startConversion() {
+    const url = $urlInput.value.trim();
+    if (!isValidUrl(url)) return;
+
+    // UI: loading state
+    setConverting(true);
+    hideSection($downloadCard);
+    hideSection($errorCard);
+    showSection($progressCard);
+    updateProgress(0, 'queued');
+    $waveform.classList.add('active');
+
+    try {
+      const res = await fetch('/api/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, format: state.format }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Erro ao iniciar conversão');
+      }
+
+      state.jobId = data.jobId;
+      subscribeToProgress(data.jobId);
+    } catch (err) {
+      showError(err.message);
+      setConverting(false);
+    }
+  }
+
+  function setConverting(loading) {
+    state.status = loading ? 'converting' : 'idle';
+    $btnConvert.disabled = loading;
+    $btnConvert.classList.toggle('loading', loading);
+    $btnConvertText.style.display = loading ? 'none' : '';
+    $btnConvertLoader.style.display = loading ? 'flex' : 'none';
+  }
+
+  // ─── SSE Progress ──────────────────────────────────
+  function subscribeToProgress(jobId) {
+    if (state.eventSource) {
+      state.eventSource.close();
     }
 
-    /**
-     * Updates the UI state
-     * @param {string} state - 'idle', 'loading', 'success', 'error', 'fetching-info'
-     * @param {string} [message] - Optional message
-     */
-    function updateUIState(state, message = '') {
-        // Reset all
-        statusContainer.classList.add('hidden');
-        errorBox.classList.add('hidden');
-        successBox.classList.add('hidden');
-        downloadBtn.disabled = false;
+    const es = new EventSource(`/api/convert/${jobId}/status`);
+    state.eventSource = es;
 
-        switch (state) {
-            case 'fetching-info':
-                statusContainer.classList.remove('hidden');
-                statusMessage.textContent = 'Buscando informações do vídeo...';
-                downloadBtn.disabled = true;
-                break;
-            case 'loading':
-                statusContainer.classList.remove('hidden');
-                statusMessage.textContent = 'Convertendo e preparando download...';
-                downloadBtn.disabled = true;
-                break;
-            case 'success':
-                successBox.classList.remove('hidden');
-                break;
-            case 'error':
-                errorBox.classList.remove('hidden');
-                errorText.textContent = message || 'Ocorreu um erro. Tente novamente.';
-                break;
-            case 'idle':
-            default:
-                break;
-        }
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleProgressUpdate(data);
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    es.onerror = () => {
+      es.close();
+      state.eventSource = null;
+      // Only show error if not already completed
+      if (state.status === 'converting') {
+        showError('Conexão perdida. Tente novamente.');
+        setConverting(false);
+      }
+    };
+  }
+
+  function handleProgressUpdate(data) {
+    // Update preview info if available
+    if (data.thumbnail && !$previewCard.classList.contains('hidden')) {
+      // already showing
+    } else if (data.title && data.thumbnail) {
+      showPreview(data);
     }
 
-    /**
-     * Fetches video info and updates preview
-     */
-    async function fetchVideoInfo() {
-        const url = urlInput.value.trim();
-        if (!isValidYouTubeUrl(url)) {
-            previewContainer.classList.add('hidden');
-            return;
-        }
+    updateProgress(data.progress || 0, data.status);
 
-        updateUIState('fetching-info');
+    if (data.speed) $progressSpeed.textContent = data.speed;
+    if (data.eta) $progressEta.textContent = `ETA ${data.eta}`;
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/info`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url }),
-            });
+    if (data.status === 'completed') {
+      onCompleted(data);
+    } else if (data.status === 'error') {
+      showError(data.error || 'Erro desconhecido');
+      setConverting(false);
+    }
+  }
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Não foi possível carregar as informações do vídeo.');
-            }
+  function updateProgress(percent, status) {
+    const p = Math.round(percent);
+    $progressFill.style.width = `${p}%`;
+    $progressPercent.textContent = `${p}%`;
 
-            const data = await response.json();
-            videoThumbnail.src = data.thumbnail;
-            videoTitle.textContent = data.title;
-            previewContainer.classList.remove('hidden');
-            updateUIState('idle');
-        } catch (error) {
-            console.error("Erro ao buscar info:", error);
-            // We don't necessarily want to block the download if info fails,
-            // but we should inform the user if it's a critical failure.
-            updateUIState('error', error.message);
-            previewContainer.classList.add('hidden');
-        }
+    const statusLabels = {
+      queued: 'Na fila',
+      downloading: 'Baixando',
+      converting: 'Convertendo',
+      completed: 'Finalizado',
+      error: 'Erro',
+      cancelled: 'Cancelado',
+    };
+
+    $statusText.textContent = statusLabels[status] || status;
+    $statusBadge.className = `status-badge ${status || ''}`;
+  }
+
+  // ─── Completed ─────────────────────────────────────
+  function onCompleted(data) {
+    if (state.eventSource) {
+      state.eventSource.close();
+      state.eventSource = null;
     }
 
-    // Debounce URL input for info fetching
-    let timeout = null;
-    urlInput.addEventListener('input', () => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-            fetchVideoInfo();
-        }, 800);
+    state.status = 'completed';
+    $waveform.classList.remove('active');
+    setConverting(false);
+    hideSection($progressCard);
+
+    $downloadTitle.textContent = 'Pronto!';
+    $downloadFilename.textContent = data.filename || data.title || 'audio';
+    showSection($downloadCard);
+
+    // Save to history
+    addToHistory({
+      id: data.id,
+      title: data.title || data.filename || 'Audio',
+      format: state.format,
+      completedAt: Date.now(),
     });
 
-    downloadBtn.addEventListener('click', async () => {
-        const url = urlInput.value.trim();
-        const format = formatSelect.value;
+    showToast('Conversão finalizada!', 'success');
+  }
 
-        // Validate Input
-        if (!url) {
-            updateUIState('error', 'Por favor, insira um link do YouTube.');
-            return;
-        }
+  // ─── Download ──────────────────────────────────────
+  function downloadFile() {
+    if (!state.jobId) return;
+    const a = document.createElement('a');
+    a.href = `/api/convert/${state.jobId}/download`;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
 
-        if (!isValidYouTubeUrl(url)) {
-            updateUIState('error', 'Por favor, insira um link válido do YouTube.');
-            return;
-        }
+  // ─── Error ─────────────────────────────────────────
+  function showError(message) {
+    if (state.eventSource) {
+      state.eventSource.close();
+      state.eventSource = null;
+    }
 
-        // Set Loading State
-        updateUIState('loading');
+    state.status = 'error';
+    $waveform.classList.remove('active');
+    hideSection($progressCard);
+    $errorMessage.textContent = message;
+    showSection($errorCard);
+    showToast(message, 'error');
+  }
 
-        try {
-            const response = await fetch(`${BACKEND_URL}/download`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ url, format }),
-            });
+  // ─── Reset ─────────────────────────────────────────
+  function resetUI() {
+    state.jobId = null;
+    state.status = 'idle';
+    hideSection($previewCard);
+    hideSection($progressCard);
+    hideSection($downloadCard);
+    hideSection($errorCard);
+    $progressFill.style.width = '0%';
+    $progressPercent.textContent = '0%';
+    $progressSpeed.textContent = '';
+    $progressEta.textContent = '';
+    $waveform.classList.remove('active');
+    $urlInput.value = '';
+    $urlInput.focus();
+    $btnClear.style.display = 'none';
+    $btnConvert.disabled = true;
+    setHint('');
+    setConverting(false);
+  }
 
-            if (!response.ok) {
-                let errorMsg = 'Falha na conversão.';
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.error || errorMsg;
-                } catch (e) {
-                    // response might not be JSON
-                }
-                throw new Error(errorMsg);
-            }
+  // ─── History ───────────────────────────────────────
+  function loadHistory() {
+    try {
+      return JSON.parse(localStorage.getItem('ytmp3pro_history') || '[]');
+    } catch {
+      return [];
+    }
+  }
 
-            // Handle file download
-            const blob = await response.blob();
-            const downloadUrl = window.URL.createObjectURL(blob);
+  function saveHistory() {
+    try {
+      localStorage.setItem('ytmp3pro_history', JSON.stringify(state.history.slice(0, 20)));
+    } catch {
+      // ignore
+    }
+  }
 
-            const a = document.createElement('a');
-            a.href = downloadUrl;
+  function addToHistory(item) {
+    state.history.unshift(item);
+    if (state.history.length > 20) state.history.pop();
+    saveHistory();
+    renderHistory();
+  }
 
-            const contentDisposition = response.headers.get('Content-Disposition');
-            let fileName = `audio.${format}`;
-            if (contentDisposition) {
-                const match = contentDisposition.match(/filename="?(.+?)"?$/);
-                if (match && match[1]) {
-                    fileName = match[1];
-                }
-            }
+  function renderHistory() {
+    if (state.history.length === 0) {
+      hideSection($historySection);
+      return;
+    }
 
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(downloadUrl);
+    showSection($historySection);
+    $historyList.innerHTML = state.history.map((item) => `
+      <div class="history-item">
+        <div class="history-item-info">
+          <div class="history-item-title">${escapeHtml(item.title)}</div>
+          <div class="history-item-meta">${timeAgo(item.completedAt)}</div>
+        </div>
+        <span class="history-item-format">${escapeHtml(item.format)}</span>
+      </div>
+    `).join('');
+  }
 
-            updateUIState('success');
-        } catch (error) {
-            console.error("Erro no download:", error);
-            updateUIState('error', error.message || 'Ocorreu um erro durante o download.');
-        }
-    });
-});
+  // ─── UI Helpers ────────────────────────────────────
+  function showSection(el) { el.classList.remove('hidden'); }
+  function hideSection(el) { el.classList.add('hidden'); }
+
+  function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type || ''}`;
+    toast.textContent = message;
+    $toastContainer.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(40px)';
+      toast.style.transition = '0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  // ─── Utilities ─────────────────────────────────────
+  function formatDuration(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function timeAgo(timestamp) {
+    const diff = Date.now() - timestamp;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'agora';
+    if (mins < 60) return `${mins}min atrás`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h atrás`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d atrás`;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ─── Start ─────────────────────────────────────────
+  init();
+})();
