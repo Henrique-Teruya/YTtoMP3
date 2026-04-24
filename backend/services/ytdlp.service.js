@@ -7,6 +7,7 @@
 
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const config = require('../config');
 const logger = require('../utils/logger');
 const { DownloadError, TimeoutError } = require('../utils/errors');
@@ -18,6 +19,9 @@ const { sanitizeFilename } = require('../utils/sanitizer');
  * @returns {Promise<object>} Video info (title, thumbnail, duration, channel, etc.)
  */
 async function getVideoInfo(url) {
+  const cookiesPath = path.resolve(process.cwd(), 'cookies.txt');
+  const hasCookies = fs.existsSync(cookiesPath);
+
   return new Promise((resolve, reject) => {
     const args = [
       '--dump-json',
@@ -30,8 +34,13 @@ async function getVideoInfo(url) {
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--add-header', 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
       '--add-header', 'Accept-Language:en-US,en;q=0.9',
-      url,
     ];
+
+    if (hasCookies) {
+      args.push('--cookies', cookiesPath);
+    }
+
+    args.push(url);
 
     logger.debug(`yt-dlp info: ${config.ytDlpPath} ${args.join(' ')}`);
 
@@ -114,6 +123,9 @@ async function getVideoInfo(url) {
  * @returns {Promise<{filePath: string, filename: string, title: string}>}
  */
 async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal }) {
+  const cookiesPath = path.resolve(process.cwd(), 'cookies.txt');
+  const hasCookies = fs.existsSync(cookiesPath);
+
   return new Promise((resolve, reject) => {
     const outputTemplate = path.join(outputDir, '%(title)s.%(ext)s');
 
@@ -134,8 +146,14 @@ async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--add-header', 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
       '--add-header', 'Accept-Language:en-US,en;q=0.9',
-      '-o', outputTemplate,
     ];
+
+    if (hasCookies) {
+      args.push('--cookies', cookiesPath);
+    }
+
+    args.push('-o', outputTemplate);
+    args.push(url);
 
     // Best quality for MP3
     if (format === 'mp3') {
