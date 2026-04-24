@@ -112,10 +112,12 @@ function streamStatus(req, res, next) {
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
     });
+    if (res.flush) res.flush();
 
     // Send initial state
     const sendEvent = (data) => {
       res.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (res.flush) res.flush();
     };
 
     // Register listener

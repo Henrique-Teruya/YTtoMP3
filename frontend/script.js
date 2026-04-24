@@ -1,5 +1,5 @@
 /**
- * YTMP3 PRO — Frontend Application
+ * YTMP3 — Frontend Application
  *
  * Vanilla JS application handling URL input, format selection,
  * conversion requests, SSE progress streaming, and download.
@@ -23,7 +23,7 @@
   const $progressCard  = document.getElementById('progress-card');
   const $statusBadge   = document.getElementById('status-badge');
   const $statusText    = document.getElementById('status-text');
-  const $progressPercent = document.getElementById('progress-percent');
+  const $progressTicker = document.getElementById('progress-ticker');
   const $progressFill  = document.getElementById('progress-bar-fill');
   const $progressSpeed = document.getElementById('progress-speed');
   const $progressEta   = document.getElementById('progress-eta');
@@ -51,6 +51,7 @@
     history: loadHistory(),
   };
 
+
   // ─── YouTube URL Validation ─────────────────────────
   const YT_REGEX = /^https?:\/\/(www\.)?(youtube\.com\/(watch\?v=|shorts\/|playlist\?list=)|youtu\.be\/|music\.youtube\.com\/watch\?v=)/;
 
@@ -61,7 +62,17 @@
   // ─── Init ───────────────────────────────────────────
   function init() {
     renderHistory();
+    initBackgroundVideo();
     bindEvents();
+  }
+
+  function initBackgroundVideo() {
+    const video = document.getElementById('bg-video');
+    if (video) {
+      video.play()
+        .then(() => console.log('[Video] Playing background motion'))
+        .catch((err) => console.error('[Video] Playback failed:', err));
+    }
   }
 
   function bindEvents() {
@@ -82,6 +93,7 @@
       btn.addEventListener('click', () => selectFormat(btn.dataset.format));
     });
   }
+
 
   // ─── URL Input Handling ─────────────────────────────
   function onUrlInput() {
@@ -187,6 +199,7 @@
       }
 
       state.jobId = data.jobId;
+      $btnConvertLoader.querySelector('span:last-child').textContent = 'Processando...';
       subscribeToProgress(data.jobId);
     } catch (err) {
       showError(err.message);
@@ -232,21 +245,37 @@
   }
 
   function handleProgressUpdate(data) {
-    // Update preview info if available
-    if (data.thumbnail && !$previewCard.classList.contains('hidden')) {
-      // already showing
-    } else if (data.title && data.thumbnail) {
+    console.log('[SSE] Progress Update:', data);
+
+    // Update preview info if available (fallback if fetchVideoInfo failed)
+    if (data.title && data.thumbnail && $previewCard.classList.contains('hidden')) {
       showPreview(data);
     }
 
-    updateProgress(data.progress || 0, data.status);
+    const progress = data.progress || 0;
+    const status = data.status || 'queued';
 
-    if (data.speed) $progressSpeed.textContent = data.speed;
-    if (data.eta) $progressEta.textContent = `ETA ${data.eta}`;
+    updateProgress(progress, status);
 
-    if (data.status === 'completed') {
+    if (data.speed) {
+      $progressSpeed.textContent = data.speed;
+      $progressSpeed.style.display = 'inline';
+    } else {
+      $progressSpeed.style.display = 'none';
+    }
+
+    if (data.eta) {
+      $progressEta.textContent = `ETA ${data.eta}`;
+      $progressEta.style.display = 'inline';
+    } else {
+      $progressEta.style.display = 'none';
+    }
+
+    if (status === 'completed') {
+      console.log('[SSE] Job completed, triggering download...');
       onCompleted(data);
-    } else if (data.status === 'error') {
+    } else if (status === 'error') {
+      console.error('[SSE] Job failed:', data.error);
       showError(data.error || 'Erro desconhecido');
       setConverting(false);
     }
@@ -255,7 +284,7 @@
   function updateProgress(percent, status) {
     const p = Math.round(percent);
     $progressFill.style.width = `${p}%`;
-    $progressPercent.textContent = `${p}%`;
+    updateTicker(p);
 
     const statusLabels = {
       queued: 'Na fila',
@@ -268,6 +297,23 @@
 
     $statusText.textContent = statusLabels[status] || status;
     $statusBadge.className = `status-badge ${status || ''}`;
+  }
+
+  function updateTicker(value) {
+    const str = value.toString().padStart(3, ' ');
+    const columns = $progressTicker.querySelectorAll('.ticker-column');
+    
+    str.split('').forEach((char, i) => {
+      const digit = char === ' ' ? -1 : parseInt(char, 10);
+      const column = columns[i];
+      if (digit === -1) {
+        column.style.transform = 'translateY(1.5rem)'; // Hide
+        column.style.opacity = '0';
+      } else {
+        column.style.transform = `translateY(-${digit * 1.5}rem)`;
+        column.style.opacity = '1';
+      }
+    });
   }
 
   // ─── Completed ─────────────────────────────────────
@@ -290,11 +336,17 @@
     addToHistory({
       id: data.id,
       title: data.title || data.filename || 'Audio',
+      thumbnail: data.thumbnail || null,
       format: state.format,
       completedAt: Date.now(),
     });
 
     showToast('Conversão finalizada!', 'success');
+
+    // AUTO DOWNLOAD: Trigger the file download in the browser
+    setTimeout(() => {
+      downloadFile();
+    }, 500);
   }
 
   // ─── Download ──────────────────────────────────────
@@ -332,7 +384,7 @@
     hideSection($downloadCard);
     hideSection($errorCard);
     $progressFill.style.width = '0%';
-    $progressPercent.textContent = '0%';
+    updateTicker(0);
     $progressSpeed.textContent = '';
     $progressEta.textContent = '';
     $waveform.classList.remove('active');

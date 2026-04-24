@@ -3,23 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="YTMP3 PRO — Professional YouTube to audio converter. Download high-quality MP3, WAV, FLAC, and M4A from any YouTube video.">
+  <meta name="description" content="YTMP3 — Professional YouTube to audio converter. Download high-quality MP3, WAV, FLAC, and M4A from any YouTube video.">
   <meta name="theme-color" content="#0a0a0b">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="YTMP3 PRO — YouTube Audio Converter">
+  <meta property="og:title" content="YTMP3 — YouTube Audio Converter">
   <meta property="og:description" content="Convert YouTube videos to high-quality MP3, WAV, FLAC, and M4A audio files.">
   <meta property="og:type" content="website">
 
-  <title>YTMP3 PRO — YouTube Audio Converter</title>
+  <title>YTMP3 — YouTube Audio Converter</title>
 
   <!-- Fonts: Satoshi + General Sans from Fontshare -->
   <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Azeret+Mono:wght@700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
 </head>
 <body>
+
+  <!-- Background Video -->
+  <div class="video-bg-container">
+    <video id="bg-video" autoplay muted loop playsinline>
+      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260418_115655_b4d9cd77-feed-43cd-a198-af78ebdf1f7a.mp4" type="video/mp4">
+    </video>
+  </div>
 
   <!-- Grain Overlay -->
   <div class="grain" aria-hidden="true"></div>
@@ -45,7 +53,6 @@
         </div>
         <div class="logo-text">
           <span class="logo-name">YTMP3</span>
-          <span class="logo-badge">PRO</span>
         </div>
       </div>
       <p class="tagline">YouTube → High-Quality Audio</p>
@@ -131,7 +138,21 @@
             <span class="status-dot"></span>
             <span class="status-text" id="status-text">Aguardando</span>
           </div>
-          <span class="progress-percent" id="progress-percent">0%</span>
+          <div class="progress-ticker" id="progress-ticker">
+            <div class="ticker-column" data-index="0">
+              <div class="ticker-digit">0</div><div class="ticker-digit">1</div><div class="ticker-digit">2</div><div class="ticker-digit">3</div><div class="ticker-digit">4</div>
+              <div class="ticker-digit">5</div><div class="ticker-digit">6</div><div class="ticker-digit">7</div><div class="ticker-digit">8</div><div class="ticker-digit">9</div>
+            </div>
+            <div class="ticker-column" data-index="1">
+              <div class="ticker-digit">0</div><div class="ticker-digit">1</div><div class="ticker-digit">2</div><div class="ticker-digit">3</div><div class="ticker-digit">4</div>
+              <div class="ticker-digit">5</div><div class="ticker-digit">6</div><div class="ticker-digit">7</div><div class="ticker-digit">8</div><div class="ticker-digit">9</div>
+            </div>
+            <div class="ticker-column" data-index="2">
+              <div class="ticker-digit">0</div><div class="ticker-digit">1</div><div class="ticker-digit">2</div><div class="ticker-digit">3</div><div class="ticker-digit">4</div>
+              <div class="ticker-digit">5</div><div class="ticker-digit">6</div><div class="ticker-digit">7</div><div class="ticker-digit">8</div><div class="ticker-digit">9</div>
+            </div>
+            <span class="ticker-symbol">%</span>
+          </div>
         </div>
 
         <div class="progress-bar-track">
@@ -206,8 +227,8 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>Powered by <strong>yt-dlp</strong> + <strong>FFmpeg</strong></p>
-      <p class="footer-sub">Uso pessoal e educacional apenas.</p>
+      <p>&copy; 2026 <strong>Henrique Teruya</strong>. Todos os direitos reservados.</p>
+      <p class="footer-sub">Powered by <strong>yt-dlp</strong> + <strong>FFmpeg</strong></p>
     </footer>
   </div>
 

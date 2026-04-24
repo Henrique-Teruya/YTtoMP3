@@ -24,7 +24,9 @@ async function getVideoInfo(url) {
       '--no-download',
       '--no-warnings',
       '--no-playlist',
-      '--socket-timeout', '30',
+      '--no-colors',
+      '--ignore-config',
+      '--no-cache-dir',
       url,
     ];
 
@@ -123,6 +125,9 @@ async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal
       '--retries', '3',
       '--fragment-retries', '3',
       '--ffmpeg-location', config.ffmpegPath,
+      '--no-colors',
+      '--ignore-config',
+      '--no-cache-dir',
       '-o', outputTemplate,
     ];
 
@@ -149,7 +154,7 @@ async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal
     });
 
     let stderr = '';
-    let lastProgress = 0;
+    let lastProgress = -1;
     let downloadedFilePath = null;
 
     // Handle abort signal
@@ -167,21 +172,31 @@ async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal
     }, config.downloadTimeoutMs);
 
     // Parse stdout for progress
+    let buffer = '';
     proc.stdout.on('data', (chunk) => {
-      const lines = chunk.toString().split('\n');
+      buffer += chunk.toString();
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() || ''; // Keep the last incomplete line
 
       for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        logger.debug(`[${jobId}] yt-dlp: ${trimmedLine}`);
+
         // Progress line: [download]  45.2% of  5.23MiB at  1.23MiB/s ETA 00:04
-        const progressMatch = line.match(
-          /\[download\]\s+([\d.]+)%\s+of\s+~?([\d.]+\w+)\s+at\s+([\d.]+\w+\/s)\s+ETA\s+([\d:]+)/
-        );
+        // More lenient regex to handle various yt-dlp versions and formats
+        const progressMatch = trimmedLine.match(/\[download\]\s+([\d.]+)%\s+of\s+(?:~?[\d.]+\w+)\s+at\s+([\d.]+\w+\/s)\s+ETA\s+([\d:]+)/i) ||
+                             trimmedLine.match(/\[download\]\s+([\d.]+)%/i);
 
         if (progressMatch) {
           const percent = parseFloat(progressMatch[1]);
-          const speed = progressMatch[3];
-          const eta = progressMatch[4];
+          const speed = progressMatch[2] || null;
+          const eta = progressMatch[3] || null;
 
-          if (percent > lastProgress) {
+          // Always send the first update (lastProgress is -1 initially)
+          // or if the percentage has increased
+          if (percent > lastProgress || lastProgress === -1) {
             lastProgress = percent;
             onProgress({
               percent: Math.min(percent, 95), // reserve 5% for conversion
@@ -193,37 +208,55 @@ async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal
           continue;
         }
 
-        // Destination line: [ExtractAudio] Destination: /path/to/file.mp3
-        const destMatch = line.match(/\[ExtractAudio\]\s+Destination:\s+(.+)/);
-        if (destMatch) {
-          downloadedFilePath = destMatch[1].trim();
+        // Destination line: [download] Destination: /path/to/file.mp3
+        if (trimmedLine.includes('Destination:')) {
+          const destMatch = trimmedLine.match(/Destination:\s+(.+)/);
+          if (destMatch) {
+            const dest = destMatch[1].trim();
+            if (dest.endsWith(`.${format}`)) {
+              downloadedFilePath = dest;
+            }
+          }
+          continue;
+        }
+
+        // ExtractAudio line: [ExtractAudio] Destination: /path/to/file.mp3
+        if (trimmedLine.includes('[ExtractAudio]')) {
+          const extractMatch = trimmedLine.match(/Destination:\s+(.+)/);
+          if (extractMatch) {
+            downloadedFilePath = extractMatch[1].trim();
+          }
           onProgress({ percent: 97, status: 'converting' });
           continue;
         }
 
         // Merger/PostProcessor completion
-        if (line.includes('[Merger]') || line.includes('[EmbedThumbnail]') || line.includes('[Metadata]')) {
+        if (trimmedLine.includes('[Merger]') || trimmedLine.includes('[EmbedThumbnail]') || trimmedLine.includes('[Metadata]')) {
           onProgress({ percent: 98, status: 'converting' });
           continue;
         }
 
         // Already downloaded
-        if (line.includes('has already been downloaded')) {
-          const alreadyMatch = line.match(/\[download\]\s+(.+)\s+has already been downloaded/);
+        if (trimmedLine.includes('has already been downloaded')) {
+          const alreadyMatch = trimmedLine.match(/\[download\]\s+(.+)\s+has already been downloaded/);
           if (alreadyMatch) {
             downloadedFilePath = alreadyMatch[1].trim();
           }
         }
 
         // Deleting original file (means conversion happened)
-        if (line.includes('Deleting original file')) {
+        if (trimmedLine.includes('Deleting original file')) {
           onProgress({ percent: 99, status: 'converting' });
         }
       }
     });
 
     proc.stderr.on('data', (chunk) => {
-      stderr += chunk.toString();
+      const msg = chunk.toString().trim();
+      if (msg) {
+        stderr += msg + '\n';
+        logger.debug(`[${jobId}] yt-dlp stderr: ${msg}`);
+      }
     });
 
     proc.on('close', (code) => {
@@ -252,14 +285,15 @@ async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal
         const fs = require('fs');
         try {
           const files = fs.readdirSync(outputDir);
+          // Look for the file with the correct extension
           const audioFile = files.find((f) =>
             f.endsWith(`.${format}`)
           );
           if (audioFile) {
             downloadedFilePath = path.join(outputDir, audioFile);
           }
-        } catch {
-          // ignore
+        } catch (err) {
+          logger.warn(`[${jobId}] Failed to list output directory: ${err.message}`);
         }
       }
 
