@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+backend/downloads/*
+.git
+.env
+.env.example
+README.md
+Dockerfile
+.dockerignore
+.agents
+.cursor
+.gemini
