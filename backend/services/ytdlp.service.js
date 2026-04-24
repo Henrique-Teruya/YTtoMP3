@@ -20,8 +20,17 @@ const { sanitizeFilename } = require('../utils/sanitizer');
  */
 async function getVideoInfo(url) {
   const cookiesPath = path.resolve(process.cwd(), 'cookies.txt');
-  const hasCookies = fs.existsSync(cookiesPath);
-  logger.debug(`[Info] Cookies check: ${hasCookies} at ${cookiesPath}`);
+  let hasCookies = false;
+  
+  if (fs.existsSync(cookiesPath)) {
+    const stats = fs.statSync(cookiesPath);
+    if (stats.size > 100) { // Arquivo Netscape real costuma ter mais de 100 bytes
+      hasCookies = true;
+      logger.info(`[Info] Cookies.txt detectado e carregado (${stats.size} bytes)`);
+    } else {
+      logger.warn(`[Warn] Cookies.txt ignorado: arquivo muito pequeno ou vazio (${stats.size} bytes)`);
+    }
+  }
 
   return new Promise((resolve, reject) => {
     const args = [
@@ -73,16 +82,16 @@ async function getVideoInfo(url) {
         logger.error('yt-dlp info failed', { code, stderr: stderr.trim() });
 
         if (stderr.includes('Private video') || stderr.includes('Sign in to confirm')) {
-          return reject(new DownloadError('This video is private or requires authentication'));
+          return reject(new DownloadError('Este vídeo é privado ou requer autenticação. Verifique se os cookies.txt estão atualizados.'));
         }
         if (stderr.includes('Video unavailable') || stderr.includes('not available')) {
-          return reject(new DownloadError('This video is unavailable'));
+          return reject(new DownloadError('Este vídeo não está disponível no servidor de produção (pode ser restrição regional ou de idade).'));
         }
         if (stderr.includes('is not a valid URL')) {
-          return reject(new DownloadError('Invalid video URL'));
+          return reject(new DownloadError('A URL fornecida não é um link válido do YouTube.'));
         }
 
-        return reject(new DownloadError(`Failed to fetch video info: ${stderr.trim().slice(0, 200)}`));
+        return reject(new DownloadError(`Erro do YouTube: ${stderr.trim().slice(0, 200)}`));
       }
 
       try {
@@ -130,8 +139,12 @@ async function getVideoInfo(url) {
  */
 async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal }) {
   const cookiesPath = path.resolve(process.cwd(), 'cookies.txt');
-  const hasCookies = fs.existsSync(cookiesPath);
-  logger.debug(`[${jobId}] Cookies check: ${hasCookies} at ${cookiesPath}`);
+  let hasCookies = false;
+
+  if (fs.existsSync(cookiesPath)) {
+    const stats = fs.statSync(cookiesPath);
+    if (stats.size > 100) hasCookies = true;
+  }
 
   return new Promise((resolve, reject) => {
     const outputTemplate = path.join(outputDir, '%(title)s.%(ext)s');
@@ -302,17 +315,17 @@ async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal
         logger.error(`[${jobId}] yt-dlp failed`, { code, stderr: stderr.trim() });
 
         if (stderr.includes('Private video') || stderr.includes('Sign in')) {
-          return reject(new DownloadError('This video is private or requires authentication'));
+          return reject(new DownloadError('Vídeo restrito. Os cookies fornecidos não têm permissão para acessar este conteúdo.'));
         }
         if (stderr.includes('unavailable') || stderr.includes('not available')) {
-          return reject(new DownloadError('This video is unavailable'));
+          return reject(new DownloadError('O vídeo tornou-se indisponível durante o processamento.'));
         }
         if (stderr.includes('copyright')) {
-          return reject(new DownloadError('This video is blocked due to copyright'));
+          return reject(new DownloadError('Download bloqueado por direitos autorais pelo YouTube.'));
         }
 
         return reject(new DownloadError(
-          `Download failed (exit code ${code}): ${stderr.trim().slice(0, 300)}`
+          `Falha no processamento (Código ${code}): O YouTube bloqueou a requisição.`
         ));
       }
 
