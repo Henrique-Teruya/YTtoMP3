@@ -21,6 +21,7 @@ const { sanitizeFilename } = require('../utils/sanitizer');
 async function getVideoInfo(url) {
   const cookiesPath = path.resolve(process.cwd(), 'cookies.txt');
   const hasCookies = fs.existsSync(cookiesPath);
+  logger.debug(`[Info] Cookies check: ${hasCookies} at ${cookiesPath}`);
 
   return new Promise((resolve, reject) => {
     const args = [
@@ -36,7 +37,9 @@ async function getVideoInfo(url) {
       '--add-header', 'Accept-Language:en-US,en;q=0.9',
       '--geo-bypass',
       '--no-check-certificates',
-      '--extractor-args', 'youtube:player_client=android,web',
+      '--force-ipv4',
+      '--referer', 'https://www.google.com/',
+      '--extractor-args', 'youtube:player_client=ios,android,web,mweb',
     ];
 
     if (hasCookies) {
@@ -128,6 +131,7 @@ async function getVideoInfo(url) {
 async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal }) {
   const cookiesPath = path.resolve(process.cwd(), 'cookies.txt');
   const hasCookies = fs.existsSync(cookiesPath);
+  logger.debug(`[${jobId}] Cookies check: ${hasCookies} at ${cookiesPath}`);
 
   return new Promise((resolve, reject) => {
     const outputTemplate = path.join(outputDir, '%(title)s.%(ext)s');
@@ -151,7 +155,9 @@ async function downloadAudio({ url, format, outputDir, jobId, onProgress, signal
       '--add-header', 'Accept-Language:en-US,en;q=0.9',
       '--geo-bypass',
       '--no-check-certificates',
-      '--extractor-args', 'youtube:player_client=android,web',
+      '--force-ipv4',
+      '--referer', 'https://www.google.com/',
+      '--extractor-args', 'youtube:player_client=ios,android,web,mweb',
     ];
 
     if (hasCookies) {
