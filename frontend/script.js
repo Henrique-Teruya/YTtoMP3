@@ -8,6 +8,13 @@
 (function () {
   'use strict';
 
+  // ─── Configuration ──────────────────────────────────
+  // No Vercel, o frontend não consegue achar o /api se ele estiver em outro domínio (Railway).
+  // Se estiver em localhost, usamos caminho relativo. Se for produção, usamos a URL do Railway.
+  const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? '' 
+    : 'https://yttomp3-production.up.railway.app';
+
   // ─── DOM References ─────────────────────────────────
   const $urlInput      = document.getElementById('url-input');
   const $btnClear      = document.getElementById('btn-clear');
@@ -159,7 +166,7 @@
   // ─── Fetch Video Info ──────────────────────────────
   async function fetchVideoInfo(url) {
     try {
-      const res = await fetch('/api/info', {
+      const res = await fetch(`${API_BASE_URL}/api/info`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
@@ -199,7 +206,7 @@
     $waveform.classList.add('active');
 
     try {
-      const res = await fetch('/api/convert', {
+      const res = await fetch(`${API_BASE_URL}/api/convert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, format: state.format }),
@@ -234,7 +241,7 @@
       state.eventSource.close();
     }
 
-    const es = new EventSource(`/api/convert/${jobId}/status`);
+    const es = new EventSource(`${API_BASE_URL}/api/convert/${jobId}/status`);
     state.eventSource = es;
 
     es.onmessage = (event) => {
@@ -366,7 +373,7 @@
   function downloadFile() {
     if (!state.jobId) return;
     const a = document.createElement('a');
-    a.href = `/api/convert/${state.jobId}/download`;
+    a.href = `${API_BASE_URL}/api/convert/${state.jobId}/download`;
     a.download = '';
     document.body.appendChild(a);
     a.click();
