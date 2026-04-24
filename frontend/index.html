@@ -19,14 +19,15 @@
 
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
+  
+  <!-- HLS.js for .m3u8 support -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
 
   <!-- Background Video -->
   <div class="video-bg-container">
-    <video id="bg-video" autoplay muted loop playsinline>
-      <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260418_115655_b4d9cd77-feed-43cd-a198-af78ebdf1f7a.mp4" type="video/mp4">
-    </video>
+    <video id="bg-video" autoplay muted loop playsinline></video>
   </div>
 
   <!-- Grain Overlay -->

@@ -68,9 +68,22 @@
 
   function initBackgroundVideo() {
     const video = document.getElementById('bg-video');
-    if (video) {
+    const videoSrc = 'https://stream.mux.com/QgTir2Bu4u6d01CqyKEBCks68PIm2nCM7vhwXgenS00tw.m3u8';
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(videoSrc);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play()
+          .then(() => console.log('[Video] Playing HLS background'))
+          .catch((err) => console.error('[Video] Playback failed:', err));
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native support (Safari)
+      video.src = videoSrc;
       video.play()
-        .then(() => console.log('[Video] Playing background motion'))
+        .then(() => console.log('[Video] Playing native background'))
         .catch((err) => console.error('[Video] Playback failed:', err));
     }
   }
