@@ -83,22 +83,25 @@ app.use(errorHandler);
 
 // ─── Startup ────────────────────────────────────────────
 async function start() {
-  // Ensure downloads directory exists
-  fileService.ensureDownloadDir();
-
-  // Check external dependencies
-  checkDependency('yt-dlp', config.ytDlpPath);
-  checkDependency('ffmpeg', config.ffmpegPath);
-
-  app.listen(config.port, () => {
+  // Start listening IMMEDIATELY to satisfy Railway's health checks
+  const server = app.listen(config.port, () => {
     logger.info('═══════════════════════════════════════════════');
     logger.info('  YTMP3 PRO — Server Running');
     logger.info(`  Port:        ${config.port}`);
     logger.info(`  Environment: ${config.nodeEnv}`);
-    logger.info(`  Frontend:    http://localhost:${config.port}`);
-    logger.info(`  API:         http://localhost:${config.port}/api`);
+    logger.info(`  API:         ${config.isDev ? 'http://localhost:' + config.port : 'Production URL'}/api`);
     logger.info('═══════════════════════════════════════════════');
+    
+    // Log system path for debugging
+    logger.debug('System PATH:', process.env.PATH);
+    
+    // Background dependency check
+    checkDependency('yt-dlp', config.ytDlpPath);
+    checkDependency('ffmpeg', config.ffmpegPath);
   });
+
+  // Ensure downloads directory exists
+  fileService.ensureDownloadDir();
 }
 
 /**
