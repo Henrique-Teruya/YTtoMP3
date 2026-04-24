@@ -3,19 +3,19 @@
 # Optimized for Railway / Render / Production environments
 # ═══════════════════════════════════════════════════════
 
-FROM node:18-slim
+FROM node:20-bookworm-slim
 
 # 1. Install System Dependencies (Python for yt-dlp, FFmpeg for audio processing)
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    python-is-python3 \
     ffmpeg \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Install yt-dlp (Binary installation is more reliable than pip in some environments)
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
-    && chmod a+rx /usr/local/bin/yt-dlp
+# 2. Install yt-dlp via pip (standard approach for production)
+RUN pip3 install --no-cache-dir yt-dlp
 
 # 3. Verify Installations
 RUN yt-dlp --version && ffmpeg -version

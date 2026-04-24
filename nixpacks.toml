@@ -1,0 +1,18 @@
+# ═══════════════════════════════════════════════════════
+# YTMP3 PRO — Nixpacks Configuration (Railway Native)
+# ═══════════════════════════════════════════════════════
+
+[phases.setup]
+nixPkgs = ["node", "ffmpeg", "python311"]
+
+[phases.install]
+cmds = [
+  "npm install",
+  "pip install yt-dlp"
+]
+
+[phases.build]
+cmds = ["mkdir -p backend/downloads && chmod 777 backend/downloads"]
+
+[start]
+cmd = "npm start"
