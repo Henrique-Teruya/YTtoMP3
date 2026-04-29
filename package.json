@@ -1,12 +1,51 @@
 {
   "name": "ytmp3-pro",
-  "version": "1.0.0",
-  "description": "Professional YouTube to audio converter — MP3, WAV, FLAC, M4A. Powered by yt-dlp + FFmpeg.",
-  "main": "backend/server.js",
+  "version": "1.1.0",
+  "description": "YTMP3 PRO — Professional YouTube to Audio Desktop App",
+  "main": "src/main.js",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "nodemon backend/server.js",
+    "start": "electron .",
+    "dev": "electron .",
+    "build": "electron-builder build --win --publish never",
     "check:deps": "node -e \"const { execSync } = require('child_process'); try { execSync('yt-dlp --version', {stdio:'pipe'}); console.log('✓ yt-dlp found'); } catch { console.error('✗ yt-dlp not found'); } try { execSync('ffmpeg -version', {stdio:'pipe'}); console.log('✓ ffmpeg found'); } catch { console.error('✗ ffmpeg not found'); }\""
+  },
+  "build": {
+    "appId": "com.ytmp3.pro",
+    "productName": "YTMP3 PRO",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "backend/**/*",
+      "frontend/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "frontend/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "YTMP3 PRO",
+      "installerIcon": "frontend/assets/icon.ico",
+      "uninstallerIcon": "frontend/assets/icon.ico"
+    }
   },
   "keywords": [
     "youtube",

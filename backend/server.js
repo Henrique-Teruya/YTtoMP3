@@ -11,12 +11,11 @@ const cors = require('cors');
 const compression = require('compression');
 const morgan = require('morgan');
 const path = require('path');
-const { execSync } = require('child_process');
+const { exec, execSync } = require('child_process');
 
 const config = require('./config');
 const logger = require('./utils/logger');
 const errorHandler = require('./middleware/errorHandler');
-const { generalLimiter } = require('./middleware/rateLimiter');
 const convertRoutes = require('./routes/convert.routes');
 const infoRoutes = require('./routes/info.routes');
 const fileService = require('./services/file.service');
@@ -25,6 +24,7 @@ const queueService = require('./services/queue.service');
 const app = express();
 
 // ─── Security ────────────────────────────────────────────
+// Loosened for local use
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -39,22 +39,15 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-app.use(cors({ origin: config.corsOrigin }));
+app.use(cors({ origin: '*' })); // Local dev is usually fine with open cors
 
 // ─── Parsing & Compression ──────────────────────────────
 app.use(compression());
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+app.use(express.json({ limit: '10mb' })); // Increased for local flexibility
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // ─── Request Logging ────────────────────────────────────
-if (config.isDev) {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
-
-// ─── Rate Limiting ──────────────────────────────────────
-app.use('/api', generalLimiter);
+app.use(morgan('dev'));
 
 // ─── Static Frontend ────────────────────────────────────
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
@@ -83,21 +76,21 @@ app.use(errorHandler);
 
 // ─── Startup ────────────────────────────────────────────
 async function start() {
-  // Start listening IMMEDIATELY to satisfy Railway's health checks
   const server = app.listen(config.port, () => {
+    const url = `http://localhost:${config.port}`;
     logger.info('═══════════════════════════════════════════════');
-    logger.info('  YTMP3 PRO — Server Running');
-    logger.info(`  Port:        ${config.port}`);
-    logger.info(`  Environment: ${config.nodeEnv}`);
-    logger.info(`  API:         ${config.isDev ? 'http://localhost:' + config.port : 'Production URL'}/api`);
+    logger.info('  YTMP3 PRO — Local Version');
+    logger.info(`  App running at: ${url}`);
     logger.info('═══════════════════════════════════════════════');
-    
-    // Log system path for debugging
-    logger.debug('System PATH:', process.env.PATH);
     
     // Background dependency check
     checkDependency('yt-dlp', config.ytDlpPath);
     checkDependency('ffmpeg', config.ffmpegPath);
+
+    // Open browser automatically (only if NOT in Electron)
+    if (process.env.IS_ELECTRON !== 'true') {
+      openBrowser(url);
+    }
   });
 
   // Ensure downloads directory exists
@@ -114,6 +107,16 @@ function checkDependency(name, cmd) {
   } catch {
     logger.warn(`✗ ${name} not found at "${cmd}". Install it or set the path in .env`);
   }
+}
+
+/**
+ * Opens the default browser to the specified URL.
+ */
+function openBrowser(url) {
+  const start = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+  exec(`${start} ${url}`, (err) => {
+    if (err) logger.error('Failed to open browser:', err.message);
+  });
 }
 
 // ─── Graceful Shutdown ──────────────────────────────────

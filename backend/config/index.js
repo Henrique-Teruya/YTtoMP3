@@ -15,22 +15,20 @@ const config = {
   isDev: (process.env.NODE_ENV || 'development') === 'development',
 
   /** External tools */
-  ytDlpPath: process.env.YT_DLP_PATH || 'yt-dlp',
-  ffmpegPath: process.env.FFMPEG_PATH || 'ffmpeg',
+  ytDlpPath: process.env.YT_DLP_PATH || (process.env.IS_ELECTRON === 'true' 
+    ? path.join(process.env.RESOURCES_PATH, 'bin', 'yt-dlp.exe')
+    : path.resolve('./bin/yt-dlp.exe')),
+    
+  ffmpegPath: process.env.FFMPEG_PATH || (process.env.IS_ELECTRON === 'true'
+    ? path.join(process.env.RESOURCES_PATH, 'bin', 'ffmpeg.exe')
+    : path.resolve('./bin/ffmpeg.exe')),
 
   /** Downloads */
-  downloadDir: path.resolve(process.env.DOWNLOAD_DIR || './backend/downloads'),
-  maxConcurrentDownloads: parseInt(process.env.MAX_CONCURRENT_DOWNLOADS, 10) || 3,
-  downloadTimeoutMs: parseInt(process.env.DOWNLOAD_TIMEOUT_MS, 10) || 300_000,
-  fileRetentionMinutes: parseInt(process.env.FILE_RETENTION_MINUTES, 10) || 30,
-  maxPlaylistTracks: parseInt(process.env.MAX_PLAYLIST_TRACKS, 10) || 50,
-
-  /** Security */
-  corsOrigin: process.env.CORS_ORIGIN || '*',
-  rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 900_000,
-  rateLimitMaxGeneral: parseInt(process.env.RATE_LIMIT_MAX_GENERAL, 10) || 100,
-  rateLimitMaxConvert: parseInt(process.env.RATE_LIMIT_MAX_CONVERT, 10) || 10,
-  rateLimitMaxInfo: parseInt(process.env.RATE_LIMIT_MAX_INFO, 10) || 30,
+  downloadDir: process.env.DOWNLOAD_DIR || path.resolve('./backend/downloads'),
+  maxConcurrentDownloads: parseInt(process.env.MAX_CONCURRENT_DOWNLOADS, 10) || 5, // Increased for local
+  downloadTimeoutMs: parseInt(process.env.DOWNLOAD_TIMEOUT_MS, 10) || 600_000, // 10 min
+  fileRetentionMinutes: parseInt(process.env.FILE_RETENTION_MINUTES, 10) || 60, // 1 hour
+  maxPlaylistTracks: parseInt(process.env.MAX_PLAYLIST_TRACKS, 10) || 200, // Higher for local
 
   /** Logging */
   logLevel: process.env.LOG_LEVEL || 'info',
