@@ -19,45 +19,40 @@
 
 ---
 
-## 📥 How to Install (For Users)
+## 📥 Como baixar e instalar (Para o Usuário Final)
 
-If you have the installer (`YTMP3 PRO Setup.exe`):
+**Nota para o desenvolvedor:** Você deve gerar o instalador primeiro (veja a seção abaixo) e enviar apenas o arquivo `.exe` para seu amigo. Ele não precisa baixar o código do projeto.
 
-1.  **Download** the `YTMP3 PRO Setup.exe`.
-2.  **Run** the installer.
-3.  **Open** the app from your desktop or Start menu.
-4.  **Paste** a YouTube link and click **Converter Agora**.
-
-The converted file will appear automatically in your **Downloads** folder.
+1.  **Receba o arquivo**: Peça o arquivo `YTMP3 PRO Setup.exe` (encontrado na pasta `dist/` após o build).
+2.  **Execute**: Dê um clique duplo no instalador.
+3.  **Use**: Abra o app pelo atalho na Área de Trabalho e cole um link do YouTube.
 
 ---
 
-## 🛠️ How to Build (For Developers)
+## 🛠️ Como gerar o Instalador (Para o Desenvolvedor)
 
-To generate the `.exe` installer yourself:
+Siga estes passos para criar o arquivo que você vai enviar para seus amigos:
 
-### 1. Prerequisites
-- **Node.js** (v18+) installed on your machine.
-- **Binaries**: You must place the following Windows executables in the `bin/` folder:
-  - `yt-dlp.exe`
-  - `ffmpeg.exe`
-  - `ffprobe.exe`
+### 1. Preparar os Binários
+Coloque os executáveis do Windows na pasta `bin/` (isso é essencial para o app funcionar sem Python/Node):
+- `yt-dlp.exe`
+- `ffmpeg.exe`
+- `ffprobe.exe`
 
-### 2. Setup
+### 2. Gerar o Build
+No terminal, dentro da pasta do projeto, rode:
 ```bash
-# Install project dependencies
 npm install
-```
-
-### 3. Build the Installer
-```bash
-# Generate the .exe in the /dist folder
 npm run build
 ```
 
+### 3. Localizar o Setup
+Após o comando terminar, uma pasta chamada **`dist/`** será criada. O instalador profissional estará lá dentro:
+👉 `dist/YTMP3 PRO Setup 1.1.0.exe`
+
 ---
 
-## 🏗️ Architecture
+## 🏗️ Arquitetura Desktop
 
 - **Shell**: Electron
 - **Backend**: Express.js (embedded)
